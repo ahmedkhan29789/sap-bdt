@@ -1,32 +1,6 @@
-# CAP sap_bdt
-_out
-*.db
-connection.properties
-default-*.json
-.cdsrc-private.json
-gen/
-node_modules/
-target/
+# auto generated wildcard
+.env2
+node_modules
 
-# Web IDE, App Studio
-.che/
-.gen/
-
-# MTA
-*_mta_build_tmp
-*.mtar
-mta_archives/
-
-# Other
-.DS_Store
-*.orig
-*.log
-
-*.iml
-*.flattened-pom.xml
-
-# IDEs
-# .vscode
-# .idea
-
-.cdsrc-private.json
+# added by cds deploy
+default-env.json

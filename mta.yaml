@@ -1,60 +1,125 @@
-## Generated mta.yaml based on template version 0.4.0
-## appName = sap_bdt
-## language=nodejs; multitenant=false
-## approuter=
-_schema-version: '3.1'
+_schema-version: "3.1"
 ID: sap_bdt
+description: A simple CAP project.
 version: 1.0.0
-description: "A simple CAP project."
+modules:
+- name: sap_bdt-srv
+  type: nodejs
+  path: srv
+  requires:
+  - name: sap_bdt-db
+  provides:
+  - name: srv-api
+    properties:
+      srv-url: ${default-url}
+  parameters:
+    buildpack: nodejs_buildpack
+- name: sap_bdt-db-deployer
+  type: hdb
+  path: db
+  requires:
+  - name: sap_bdt-db
+  parameters:
+    buildpack: nodejs_buildpack
+- name: sap_bdt-destination-content
+  type: com.sap.application.content
+  requires:
+  - name: sap_bdt-destination-service
+    parameters:
+      content-target: true
+  - name: sap_bdt_html_repo_host
+    parameters:
+      service-key:
+        name: sap_bdt_html_repo_host-key
+  - name: uaa_sap_bdt
+    parameters:
+      service-key:
+        name: uaa_sap_bdt-key
+  parameters:
+    content:
+      instance:
+        destinations:
+        - Name: sap_bdt_router_sap_bdt_html_repo_host
+          ServiceInstanceName: sap_bdt-html5-app-host-service
+          ServiceKeyName: sap_bdt_html_repo_host-key
+          sap.cloud.service: sap.bdt.router
+        - Authentication: OAuth2UserTokenExchange
+          Name: sap_bdt_router_uaa_sap_bdt
+          ServiceInstanceName: sap_bdt-xsuaa-service
+          ServiceKeyName: uaa_sap_bdt-key
+          sap.cloud.service: sap.bdt.router
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+- name: sap_bdt-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: sap_bdt_html_repo_host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - comsapbdtsapbdt.zip
+      name: comsapbdtsapbdt
+      target-path: resources/
+- name: comsapbdtsapbdt
+  type: html5
+  path: app/sap_bdt
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: sap_bdt-db
+  type: com.sap.xs.hdi-container
+  parameters:
+    service: hana
+    service-plan: hdi-shared
+  properties:
+    hdi-service-name: ${service-name}
+- name: sap_bdt-destination-service
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
+        instance:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          existing_destinations_policy: update
+      version: 1.0.0
+    service: destination
+    service-name: sap_bdt-destination-service
+    service-plan: lite
+- name: sap_bdt_html_repo_host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: sap_bdt-html5-app-host-service
+    service-plan: app-host
+- name: uaa_sap_bdt
+  type: org.cloudfoundry.managed-service
+  parameters:
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: sap_bdt-xsuaa-service
+    service-plan: application
 parameters:
+  deploy_mode: html5-repo
   enable-parallel-deployments: true
-   
 build-parameters:
   before-all:
-   - builder: custom
-     commands:
-      - npm install --production
-      - npx -p @sap/cds-dk cds build --production
-
-modules:
- # --------------------- SERVER MODULE ------------------------
- - name: sap_bdt-srv
- # ------------------------------------------------------------
-   type: nodejs
-   path: srv
-   parameters:
-     buildpack: nodejs_buildpack
-   requires:
-    # Resources extracted from CAP configuration
-    - name: sap_bdt-db
-   provides:
-    - name: srv-api      # required by consumers of CAP services (e.g. approuter)
-      properties:
-        srv-url: ${default-url}
-
- # -------------------- SIDECAR MODULE ------------------------
- - name: sap_bdt-db-deployer
- # ------------------------------------------------------------
-   type: hdb
-   path: db  
-   parameters:
-     buildpack: nodejs_buildpack
-   requires:
-    # 'hana' and 'xsuaa' resources extracted from CAP configuration
-    - name: sap_bdt-db
-
-
-resources:
- # services extracted from CAP configuration
- # 'service-plan' can be configured via 'cds.requires.<name>.vcap.plan'
-# ------------------------------------------------------------
- - name: sap_bdt-db
-# ------------------------------------------------------------
-   type: com.sap.xs.hdi-container
-   parameters:
-     service: hana  # or 'hanatrial' on trial landscapes
-     service-plan: hdi-shared
-   properties:
-     hdi-service-name: ${service-name}
-
-
+  - builder: custom
+    commands:
+    - npm install --production
+    - npx -p @sap/cds-dk cds build --production
